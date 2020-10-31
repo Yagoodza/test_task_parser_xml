@@ -30,7 +30,9 @@ public class XmlParser {
     private final DocumentBuilderFactory factory;
     private final DocumentBuilder builder;
     private final Document doc;
-    private final Set<String> noFields;
+    private final Set<String> notFieldsContractors;
+    private final Set<String> notFieldsContactInfo;
+
 
     public XmlParser() throws Exception {
         xmlSource = new File(PATH_TO_XML_SOURCE);
@@ -45,37 +47,38 @@ public class XmlParser {
         builder = factory.newDocumentBuilder();
         doc = builder.parse(xmlSource);
 
-        noFields = new HashSet<>();
-        noFields.add("КонтактнаяИнформация");
-        noFields.add("ДополнительныеРеквизиты");
+        notFieldsContractors = new HashSet<>();
+        notFieldsContractors.add("КонтактнаяИнформация");
+        notFieldsContractors.add("ДополнительныеРеквизиты");
+
+        notFieldsContactInfo = new HashSet<>();
     }
 
     public static void main(String[] args) throws Exception {
 
         XmlParser parser = new XmlParser();
 
-        parser.initFields(CONTRACTOR_TAG, parser.contractorWriter);
-        parser.initFields(CONTACT_INFO_TAG, parser.contactInfoWriter);
-        parser.insertingValues(CONTRACTOR_TAG, parser.contractorWriter);
-        parser.insertingValues(CONTACT_INFO_TAG, parser.contactInfoWriter);
+        parser.initFields(CONTRACTOR_TAG, parser.contractorWriter, parser.notFieldsContractors);
+        parser.initFields(CONTACT_INFO_TAG, parser.contactInfoWriter, parser.notFieldsContactInfo);
+        parser.insertingValues(CONTRACTOR_TAG, parser.contractorWriter, parser.notFieldsContractors);
+        parser.insertingValues(CONTACT_INFO_TAG, parser.contactInfoWriter, parser.notFieldsContractors);
 
         parser.contractorWriter.close();
         parser.contactInfoWriter.close();
     }
 
     /**
-     * creating a table header
-     *
+     * creating the table header
      * @throws IOException
      */
-    private void initFields(String tagName, BufferedWriter writer) throws IOException {
+    private void initFields(String tagName, BufferedWriter writer, Set<String> notFields) throws IOException {
         NodeList nodes = doc.getElementsByTagName(tagName);
         NodeList fields = nodes.item(0).getChildNodes();
         for (int columnsCounter = 0; columnsCounter < fields.getLength(); columnsCounter++) {
             Node node = fields.item(columnsCounter);
             if (node.getNodeType() == Node.ELEMENT_NODE) {
                 Element element = (Element) node;
-                if (!noFields.contains(element.getLocalName())) {
+                if (!notFields.contains(element.getLocalName())) {
                     writer.write(String.format("%s%s%s", QUOTE, element.getLocalName(), QUOTE));
                     if (columnsCounter != fields.getLength() - 2) {
                         writer.write(SEPARATOR);
@@ -86,11 +89,10 @@ public class XmlParser {
     }
 
     /**
-     * inserting a table values
-     *
+     * inserting the table values
      * @throws IOException
      */
-    private void insertingValues(String tagName, BufferedWriter writer) throws IOException {
+    private void insertingValues(String tagName, BufferedWriter writer, Set<String> notFields) throws IOException {
         NodeList nodes = doc.getElementsByTagName(tagName);
         for (int nodesCounter = 0; nodesCounter < nodes.getLength(); nodesCounter++) {
             NodeList values = nodes.item(nodesCounter).getChildNodes();
@@ -98,7 +100,7 @@ public class XmlParser {
                 Node value = values.item(valuesCounter);
                 if (value.getNodeType() == Node.ELEMENT_NODE) {
                     Element element = (Element) value;
-                    if (!noFields.contains(element.getLocalName())) {
+                    if (!notFields.contains(element.getLocalName())) {
                         writer.write(String.format("%s%s%s", QUOTE, element.getTextContent(), QUOTE));
                         if (valuesCounter != values.getLength() - 2) {
                             writer.write(SEPARATOR);
